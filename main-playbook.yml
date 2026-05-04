@@ -1,4 +1,4 @@
-    - name: Main-Playbook
+    - name: Barebones-Playbook
       hosts: debian-server
       remote_user: "{{ user_name }}"
       gather_facts: yes
@@ -7,11 +7,8 @@
       roles:
         - packages
         - ssh
-        - password-quality
         - unattended-upgrades
-        - firewall
         - mail
-        - clamav
-        - rkhunter
-        - auditd
         - lynis
+        - nftables
+

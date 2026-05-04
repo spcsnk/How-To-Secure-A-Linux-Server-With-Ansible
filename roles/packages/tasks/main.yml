@@ -8,24 +8,9 @@
       become: true
       apt:
         name: 
-          - apt-listchanges
-          - apt-transport-https
-          - apticron
-          - audispd-plugins
-          - auditd
           - ca-certificates
-          - clamav
-          - clamav-daemon
-          - clamav-freshclam
           - curl
           - fail2ban
           - host
-          - libpam-pwquality
-          - mailutils
-          - msmtp
-          - msmtp-mta
-          - psad
-          - rkhunter
-          - ufw
-          - unattended-upgrades
         state: present
+

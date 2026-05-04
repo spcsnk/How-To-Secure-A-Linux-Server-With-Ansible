@@ -1,3 +1,10 @@
+    - name: install unattended-upgrades
+      become: true
+      apt:
+        name:
+          - unattended-upgrades
+        state: present
+        update_cache: yes
 
     - name: configure unattended upgrades to only install security upgrades
       become: true
