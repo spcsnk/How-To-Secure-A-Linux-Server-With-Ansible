@@ -1,51 +1,60 @@
-
-    - name: configure mail settings
+    - name: install mail packages
       become: true
-      blockinfile:
-        path: /etc/msmtprc
-        block: |
-          defaults
-          port {{ mail_port }}
-          tls on
-          tls_trust_file /etc/ssl/certs/ca-certificates.crt
-          account {{ mail_from }}
-          host {{ mail_smtp_server }}
-          set_from_header on
-          from {{ mail_from }}
-          auth on
-          user {{ mail_from }}
-          password {{ mail_pw }}
-          account default: {{ mail_from }}
-          aliases /etc/aliases
-          logfile /var/log/msmtp
-        create: true
+      apt:
+        name:
+          - msmtp
+          - msmtp-mta
+          - bsd-mailx
+        state: present
+        update_cache: yes
 
-    - name: chmod mail config file
+    # --- msmtp config ---
+    - name: deploy msmtp config
+      become: true
+      template:
+        src: msmtprc.j2
+        dest: /etc/msmtprc
+        owner: root
+        group: root
+        mode: '0600'
+
+    # --- ensure log file exists ---
+    - name: create msmtp log file
       become: true
       file:
-        path: /etc/msmtprc
-        group: msmtp
-        mode: '640'
+        path: /var/log/msmtp.log
+        state: touch
+        owner: root
+        group: root
+        mode: '0644'
 
-    - name: configure mail settings pt. 2
+    # --- aliases ---
+    - name: configure root mail forwarding
       become: true
       lineinfile:
-        dest: /etc/aliases
-        regexp: "{{ item.regexp }}"
-        line: "{{ item.line }}"
+        path: /etc/aliases
+        regexp: '^root:'
+        line: 'root: {{ mail_to }}'
         create: true
-      loop:
-        - { regexp: '^root:', line: 'root: {{ mail_to }}' }
-        - { regexp: '^default:', line: 'default: {{ mail_to }}' }
 
-    - name: configure mail settings pt. 3
+    - name: rebuild aliases database
+      become: true
+      command: newaliases
+
+    # --- mailx config (force correct sendmail path) ---
+    - name: configure mailx to use sendmail
       become: true
       lineinfile:
         path: /etc/mail.rc
-        regexp: '^set sendmail'
-        line: 'set sendmail="/usr/bin/msmtp -t"'
+        regexp: '^set sendmail='
+        line: 'set sendmail=/usr/sbin/sendmail'
         create: yes
 
-    - name: send a testmail
+    # --- test mail ---
+    - name: send test mail
       become: true
-      shell: echo "Testmail content" | mail -s "Testmail subject" {{ mail_to }}
+      shell: |
+        echo "Testmail content" | mail -s "Testmail subject" {{ mail_to }}
+      args:
+        executable: /bin/bash
+
