@@ -1,0 +1,19 @@
+defaults
+auth           on
+tls            on
+tls_starttls   on
+tls_trust_file /etc/ssl/certs/ca-certificates.crt
+logfile        /var/log/msmtp.log
+
+account gmail
+host {{ mail_smtp_server }}
+port {{ mail_port }}
+from {{ mail_from }}
+user {{ mail_from }}
+password {{ mail_pw }}
+set_from_header on
+
+account default : gmail
+
+aliases /etc/aliases
+

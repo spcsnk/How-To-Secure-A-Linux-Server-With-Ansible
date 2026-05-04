@@ -1,0 +1,44 @@
+#!/usr/sbin/nft -f
+
+flush ruleset
+
+table inet filter {
+
+    chain inbound {
+        type filter hook input priority 0; policy drop;
+
+        # Established/related first
+        ct state established,related accept
+
+        # Drop invalid
+        ct state invalid drop
+
+        # Loopback
+        iif lo accept
+
+        # ICMP (rate-limited)
+        ip protocol icmp limit rate 50/second accept
+        ip6 nexthdr ipv6-icmp limit rate 50/second accept
+
+        # SSH with rate limiting (new connections only)
+        tcp dport {{ ssh_port }} ct state new limit rate 10/minute accept
+
+        # Web
+        tcp dport {80, 443} accept
+
+        # Logging (rate-limited)
+        limit rate 5/second log prefix "nft-drop: " flags all counter
+
+        # Final drop
+        drop
+    }
+
+    chain forward {
+        type filter hook forward priority 0; policy drop;
+    }
+
+    chain outbound {
+        type filter hook output priority 0; policy accept;
+    }
+}
+
