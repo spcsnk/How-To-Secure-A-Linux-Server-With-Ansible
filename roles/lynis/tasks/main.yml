@@ -48,5 +48,5 @@
   become: true
   shell: |
     lynis update info
-    lynis audit system | ansi2html -l > /tmp/lynis-report.html
-    echo "First Lynis report see attachment" | mail -A /tmp/lynis-report.html -s "Lynis report" {{ mail_to }}
+    lynis audit system > /tmp/lynis-report.txt
+    echo "First Lynis report see attachment" | s-nail -a /tmp/lynis-report.txt -s "Lynis report {{ ansible_hostname }}" {{ mail_to }}

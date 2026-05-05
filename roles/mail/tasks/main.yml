@@ -4,7 +4,7 @@
         name:
           - msmtp
           - msmtp-mta
-          - bsd-mailx
+          - s-nail
         state: present
         update_cache: yes
 
@@ -41,20 +41,11 @@
       become: true
       command: newaliases
 
-    # --- mailx config (force correct sendmail path) ---
-    - name: configure mailx to use sendmail
-      become: true
-      lineinfile:
-        path: /etc/mail.rc
-        regexp: '^set sendmail='
-        line: 'set sendmail=/usr/sbin/sendmail'
-        create: yes
-
     # --- test mail ---
     - name: send test mail
       become: true
       shell: |
-        echo "Testmail content" | mail -s "Testmail subject" {{ mail_to }}
+        echo "Testmail content" | s-nail -s "Testmail subject" {{ mail_to }}
       args:
         executable: /bin/bash
 
