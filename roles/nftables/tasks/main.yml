@@ -1,23 +1,27 @@
 - name: Install nftables
+  become: true
   package:
     name: nftables
     state: present
 
 - name: Ensure nftables service is enabled
+  become: true
   service:
     name: nftables
     enabled: true
 
 - name: Deploy nftables config
+  become: true
   template:
     src: nftables.conf.j2
     dest: /etc/nftables.conf
     owner: root
     group: root
     mode: '0644'
-  notify: Restart nftables
+  notify: restart nftables service
 
 - name: Ensure nftables service is running
+  become: true
   service:
     name: nftables
     state: started
