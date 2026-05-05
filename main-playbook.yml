@@ -11,4 +11,5 @@
         - mail
         - lynis
         - nftables
+        - fail2ban
 

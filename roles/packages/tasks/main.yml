@@ -10,7 +10,6 @@
         name: 
           - ca-certificates
           - curl
-          - fail2ban
           - host
         state: present
 
