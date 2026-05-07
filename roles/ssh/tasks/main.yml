@@ -1,69 +1,42 @@
-    - name: secure ssh configuration 
-      become: true
-      blockinfile:
-        path: /etc/ssh/sshd_config
-        block: |
-          ########################################################################################################
-          # start settings from https://infosec.mozilla.org/guidelines/openssh#modern-openssh-67 as of 2019-01-01
-          ########################################################################################################
-          # Supported HostKey algorithms by order of preference.
-          HostKey /etc/ssh/ssh_host_ed25519_key
-          HostKey /etc/ssh/ssh_host_rsa_key
-          HostKey /etc/ssh/ssh_host_ecdsa_key
-          KexAlgorithms curve25519-sha256@libssh.org,ecdh-sha2-nistp521,ecdh-sha2-nistp384,ecdh-sha2-nistp256,diffie-hellman-group-exchange-sha256
-          Ciphers chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes128-gcm@openssh.com,aes256-ctr,aes192-ctr,aes128-ctr
-          MACs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com,hmac-sha2-512,hmac-sha2-256,umac-128@openssh.com
-          # LogLevel VERBOSE logs user's key fingerprint on login. Needed to have a clear audit track of which key was using to log in.
-          LogLevel VERBOSE
-          # Use kernel sandbox mechanisms where possible in unprivileged processes
-          # Systrace on OpenBSD, Seccomp on Linux, seatbelt on MacOSX/Darwin, rlimit elsewhere.
-          # Note: This setting is deprecated in OpenSSH 7.5 (https://www.openssh.com/txt/release-7.5)
-          # UsePrivilegeSeparation sandbox
-          ########################################################################################################
-          # end settings from https://infosec.mozilla.org/guidelines/openssh#modern-openssh-67 as of 2019-01-01
-          ########################################################################################################
-          # don't let users set environment variables
-          PermitUserEnvironment no
-          # only use the newer, more secure protocol
-          Protocol 2
-          # disable port forwarding
-          AllowTcpForwarding no
-          AllowStreamLocalForwarding no
-          GatewayPorts no
-          PermitTunnel no
-          # don't allow login if the account has an empty password
-          PermitEmptyPasswords no
-          # ignore .rhosts and .shosts
-          IgnoreRhosts yes
-          # verify hostname matches IP
-          UseDNS yes
-          Compression no
-          TCPKeepAlive no
-          AllowAgentForwarding no
-          # don't allow .rhosts or /etc/hosts.equiv
-          HostbasedAuthentication no
-      notify: restart ssh service
-
-    - name: secure ssh configuration part 2
+    - name: ensure sshd includes config directory
       become: true
       lineinfile:
-        dest: /etc/ssh/sshd_config
-        regexp: "{{ item.regexp }}"
-        line: "{{ item.line }}"
+        path: /etc/ssh/sshd_config
+        regexp: '^Include\s+/etc/ssh/sshd_config\.d/\*\.conf'
+        line: 'Include /etc/ssh/sshd_config.d/*.conf'
+        state: present
+        insertafter: BOF
+        create: false
+      notify: restart ssh service
+
+    - name: ensure sshd_config.d exists
+      become: true
+      file:
+        path: /etc/ssh/sshd_config.d
+        state: directory
+        mode: '0755'
+
+    - name: remove conflicting ssh directives
+      become: true
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: "{{ item }}"
+        state: absent
       loop:
-        - { regexp: '^AllowGroups', line: 'AllowGroups sshusers' }
-        - { regexp: '^ClientAliveCountMax', line: 'ClientAliveCountMax 0'}
-        - { regexp: '^ClientAliveInterval', line: 'ClientAliveInterval 300'}
-        - { regexp: '^ListenAddress', line: 'ListenAddress 0.0.0.0'}
-        - { regexp: '^LoginGraceTime', line: 'LoginGraceTime 30'}
-        - { regexp: '^MaxAuthTries', line: 'MaxAuthTries 2'}
-        - { regexp: '^MaxSessions', line: 'MaxSessions 2'}
-        - { regexp: '^MaxStartups', line: 'MaxStartups 2'}
-        - { regexp: '^PasswordAuthentication', line: 'PasswordAuthentication no'}
-        - { regexp: '^Port', line: 'Port {{ ssh_port }}'}
-        - { regexp: '^PermitRootLogin', line: 'PermitRootLogin no'}
-        - { regexp: '^X11Forwarding', line: 'X11Forwarding no'}
-        - { regexp: '^Subsystem', line: 'Subsystem sftp  internal-sftp -f AUTHPRIV -l INFO'}
+        - '^Subsystem\s+sftp'
+        - '^Port\s+'
+        - '^ListenAddress\s+'
+        - '^AllowGroups\s+'
+      notify: restart ssh service
+
+    - name: deploy ssh hardening config
+      become: true
+      template:
+        src: sshd_hardening.conf.j2
+        dest: /etc/ssh/sshd_config.d/99-hardening.conf
+        owner: root
+        group: root
+        mode: '0644'
       notify: restart ssh service
 
     - name: remove short diffie diffie-hellman
@@ -80,9 +53,8 @@
       register: moduli_changed
       changed_when: "'differ:' in moduli_changed.stdout"
 
-    - name: restart ssh
+    - name: validate ssh configuration
       become: true
-      systemd:
-        name: ssh
-        state: restarted
-
+      command: sshd -t
+      register: sshd_check
+      changed_when: false
