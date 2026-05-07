@@ -1,3 +1,19 @@
+# Barebones fork
+I needed a small playbook to harden Linux servers and chose this repo as a base. It configures the SSH daemon, nftables, fail2ban, unattended-upgrades, Lynis, and mail.
+
+To run it, simply execute:
+`ansible-playbook -i hosts.yml main-playbook.yml`
+
+Add `-u`, `--ask-pass`, `--private-key`, or `--ask-become-pass` depending on your login configuration. The playbook should be run as a user with root privileges (or root itself).
+
+## Why
+I liked the original project's concept, but most of the roles were unnecessary for my needs and the ones I kept required some tweaking. Here are the main changes:
+
+* **Merged playbooks:** The original repo split logic between `requirements_playbook` (which added users to the `sshusers` group) and `main_playbook` (which locked down SSH). If you had a sudo-capable user from an installer and ran only the main playbook, you'd be locked out. I've consolidated this into a single process to prevent accidental lockouts.
+* **Refactored SSH hardening:** Instead of heavily modifying the default configuration file, this version uses `sshd_config.d`. This makes the setup much cleaner and easier to maintain during OS updates.
+* **nftables instead of UFW:** Replaced the UFW abstraction with nftables. I'd rather use the lower-level interface directly where possible.
+* **Bloat removal:** Stripped out packages like antivirus and rkhunter that weren't required for my specific use case.
+
 # How To Secure A Linux Server With Ansible
 Ansible playbooks of ["How To Secure A Linux Server"](https://github.com/imthenachoman/How-To-Secure-A-Linux-Server).
 
