@@ -1,0 +1,74 @@
+- name: apt update
+  become: true
+  apt:
+    update_cache: yes
+    upgrade: false
+
+- name: install sudo
+  become: true
+  apt:
+    name: sudo
+    state: present
+
+- name: ensure sshusers group exists
+  become: true
+  group:
+    name: sshusers
+    state: present
+
+- name: ensure sudousers group exists
+  become: true
+  group:
+    name: sudousers
+    state: present
+
+- name: ensure suusers group exists
+  become: true
+  group:
+    name: suusers
+    state: present
+
+- name: create system user
+  become: true
+  user:
+    name: "{{ user_name }}"
+    state: present
+    create_home: yes
+    shell: /bin/bash
+    groups: sshusers,sudousers,suusers
+    append: yes
+    password: "{{ user_pw | password_hash('sha512') }}"
+    update_password: on_create
+
+- name: add authorized keys for user
+  become: true
+  authorized_key:
+    user: "{{ user_name }}"
+    key: "{{ lookup('file', sshpub_location) }}"
+    state: present
+
+- name: allow sudo for sudousers group
+  become: true
+  copy:
+    dest: /etc/sudoers.d/50-sudousers
+    content: "%sudousers ALL=(ALL:ALL) ALL\n"
+    mode: '0440'
+    validate: 'visudo -cf %s'
+
+- name: passwordless sudo for main user
+  become: true
+  copy:
+    dest: /etc/sudoers.d/60-{{ user_name }}
+    content: "{{ user_name }} ALL=(ALL) NOPASSWD:ALL\n"
+    mode: '0440'
+    validate: 'visudo -cf %s'
+
+- name: restrict su access via PAM to suusers group
+  become: true
+  lineinfile:
+    path: /etc/pam.d/su
+    regexp: '^auth\s+required\s+pam_wheel\.so'
+    line: 'auth required pam_wheel.so group=suusers'
+    insertafter: '^#%PAM-1.0'
+    state: present
+
