@@ -1,6 +1,5 @@
     - name: Barebones-Playbook
       hosts: debian-server
-      remote_user: "{{ user_name }}"
       gather_facts: yes
       vars_files: ./group_vars/variables.yml
 
