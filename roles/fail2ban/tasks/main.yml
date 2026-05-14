@@ -43,6 +43,23 @@
         create: true
       notify: restart fail2ban service
 
+    - name: fail2ban - configure recidive jail
+      become: true
+      blockinfile:
+        path: /etc/fail2ban/jail.d/recidive.local
+        block: |
+          [recidive]
+          enabled = true
+          banaction = nftables[type=allports]
+          filter = recidive
+          logpath  = /var/log/fail2ban.log
+          maxretry = 5
+          findtime = 1d
+          bantime = 208w
+        create: true
+      notify: restart fail2ban service
+
+
     - name: nftables - add dependency
       become: true
       blockinfile:
