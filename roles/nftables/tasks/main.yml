@@ -10,11 +10,35 @@
     name: nftables
     enabled: true
 
+- name: Create config subdirs for modular setup
+  become: true
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0644'
+    owner: "root"
+    group: "root"
+  loop:
+    - "/etc/nftables.d/inbound.d"
+    - "/etc/nftables.d/forward.d"
+    - "/etc/nftables.d/outbound.d"
+
+
 - name: Deploy nftables config
   become: true
   template:
     src: nftables.conf.j2
     dest: /etc/nftables.conf
+    owner: root
+    group: root
+    mode: '0644'
+  notify: restart nftables service
+
+- name: Deploy hardening config to inbound.d
+  become: true
+  template:
+    src: inbound-hardening.conf.j2
+    dest: /etc/nftables.d/inbound.d/10-hardening.conf
     owner: root
     group: root
     mode: '0644'

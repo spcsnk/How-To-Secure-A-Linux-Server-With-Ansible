@@ -1,0 +1,34 @@
+#!/usr/sbin/nft -f
+
+flush ruleset
+
+table inet filter {
+
+    chain inbound {
+        type filter hook input priority 0; policy drop;
+
+	# Include modular chains
+	include "/etc/nftables.d/inbound.d/*.conf"
+
+        # Logging (rate-limited)
+        limit rate 5/second log prefix "nft-drop: " flags all counter
+
+        # Final drop
+        drop
+    }
+
+    chain forward {
+        type filter hook forward priority 0; policy drop;
+
+	# Include modular chains
+	include "/etc/nftables.d/forward.d/*.conf"
+    }
+
+    chain outbound {
+        type filter hook output priority 0; policy accept;
+
+	# Include modular chains
+	include "/etc/nftables.d/outbound.d/*.conf"
+    }
+}
+
